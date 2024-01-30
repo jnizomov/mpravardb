@@ -193,7 +193,7 @@ about_page <- tabPanel(
   p(""),
   p(paste0(project_title, " is a massively-parallel reporter assay project that allows you to dynamically filter and explore an integrated genomic dataset. You can explore the dataset and filter by chromosome number, chromosome positions, disease, cell type, or even input your own file for filtering.")),
   p("There is also an analysis tool for predicting how certain DNA sequences or genetic variants affect gene expression based on our aggregated MRPA data. We trained several machine-learning models using a Random Forest approach for providing prediction scores."),
-  tags$img(src = "test.png", height = "520px", width = "900px"),
+  tags$img(src = "diagram.png", height = "520px", width = "900px"),
   
   tags$h5(strong("Instructions")),
   tags$hr(),

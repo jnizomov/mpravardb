@@ -82,7 +82,7 @@ server <- function(input, output, session) {
       shinyjs::runjs('$("#checkmark").css("visibility", "visible");')
       return();
     } else {
-      shinyjs::runjs('$("#checkmark").attr("src", "checkmark.svg");')
+      shinyjs::runjs('$("#checkmark").attr("src", "Checkmark.svg");')
       shinyjs::runjs('$("#checkmark").css("visibility", "visible");')
     }
     
