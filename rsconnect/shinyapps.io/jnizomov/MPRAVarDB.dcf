@@ -1,0 +1,13 @@
+name: MPRAVarDB
+title: MPRAVarDB
+username: jnizomov
+account: jnizomov
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 10725935
+bundleId: 8057639
+url: https://mpravardb.shinyapps.io/MPRAVarDB/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: combined_dataset.csv|combined_dataset.R|Environment.RData|Screenshot 2023-12-05 at 2.14.58 PM.png
