@@ -201,6 +201,7 @@ about_page <- tabPanel(
   p("Text here.")
 )
 
+#Hello world!
 
 ui <- fluidPage(
   #theme = bs_theme(),
