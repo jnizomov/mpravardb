@@ -1,33 +1,23 @@
+library(GenomicRanges)
+library(data.table)
+library(ChIPpeakAnno)
+library(EnsDb.Hsapiens.v75) ##(hg19)
+library(EnsDb.Hsapiens.v86) ##(hg38)
 
-#library('GenomicRanges')
-#library(data.table)
-#library(ChIPpeakAnno)
-#library(EnsDb.Hsapiens.v75) ##(hg19)
-#library(EnsDb.Hsapiens.v86) ##(hg38)
+library(SNPlocs.Hsapiens.dbSNP144.GRCh38)
+library(SNPlocs.Hsapiens.dbSNP144.GRCh37)
 
-#library(SNPlocs.Hsapiens.dbSNP144.GRCh38)
-#library(SNPlocs.Hsapiens.dbSNP144.GRCh37)
+library(BSgenome.Hsapiens.UCSC.hg19)
+library(BSgenome.Hsapiens.UCSC.hg38)
 
-#library(BSgenome.Hsapiens.UCSC.hg19)
-#library(BSgenome.Hsapiens.UCSC.hg38)
+library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 
-#library(TxDb.Hsapiens.UCSC.hg19.knownGene)
-#library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-
-#library(data.table)
-
-#library(org.Hs.eg.db)
-
-#source('genetics_lib.R')
-
+library(data.table)
+library(org.Hs.eg.db)
 
 indir='genetics_intermediate'
-
 outdir='genetics_processed_clean'
-
-
-
-
 
 #library(diffloop)
 
@@ -44,6 +34,7 @@ outdir='genetics_processed_clean'
 # Build the annotations (a single GRanges object)
 #annotations = build_annotations(genome = 'hg19', annotations = annots)
 
+# ----------------------------- #
 
 removeDup<-function(df){
   

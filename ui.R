@@ -1,15 +1,18 @@
 library(DT)
 library(shinyjs)
 library(shinythemes)
-library(bslib)
 library(dplyr)
 library(shinyWidgets)
-
-load("combined_dataset.RData")
+library(shinybusy)
+#library(bslib)
 
 source("themes.R", local = TRUE)
 
+load("combined_dataset.RData")
+
 project_title <- "MRPAVarDB"
+
+# ----------------------------- #
 
 database_page <- tabPanel(
   title = div(icon("database", style = "margin-right: 5px;"), "Database"),
@@ -18,8 +21,7 @@ database_page <- tabPanel(
     inputId = "Id01",
     label = "",
     choices = c("Browse Database", "Upload a Custom File"),
-    justified = TRUE,
-    #status = "btn btn-secondary"
+    justified = TRUE
   ),
   
   tags$div(class = "rounded-grey-square",
@@ -54,6 +56,7 @@ database_page <- tabPanel(
         actionButton("reset", "Reset", class = "btn btn-dark")
       ),
     ),
+    
     conditionalPanel(
       condition = "input.Id01 == 'Upload a Custom File'",
       tabPanel(
@@ -68,7 +71,6 @@ database_page <- tabPanel(
                tags$div(class = "center-div",
                   tags$table(
                     tags$thead(
-                      # Additional row for "Required" and "Optional" headers
                       tags$tr(
                         tags$th("Required", colspan = 3),
                         tags$th(tags$span(style = "color: gray;", "Optional"), colspan = 2)
@@ -81,7 +83,6 @@ database_page <- tabPanel(
                         tags$th(tags$span(style = "color: gray;", "celltype"))
                       )
                     ),
-                    
                     tags$tbody(
                       tags$tr(
                         tags$td("chr1"),
@@ -109,18 +110,24 @@ database_page <- tabPanel(
                 p(""),
                )
              ),
+             
              tags$div(
                class = "text-style",
                HTML("Need to see an example file?<br>"),
              ),
+             
              tags$div(style = "margin-bottom: 12px;"),
              downloadButton("exampleDownload", "Download example .txt", class = "btn btn-dark"),
              tags$div(style = "margin-bottom: 12px;"),
+             
              tags$hr(),
+             
              fileInput("file1", "Upload a .txt file", accept = c(".txt")),
              includeCSS("www/app.css"),
+             
              actionButton("loadFile", "Load File", class = "btn btn-dark"),
              img(id = "checkmark", src = "", height = 20, width = 20, margin = 10, style = "visibility: hidden; margin-left: 5px; margin-bottom: 5px"),
+             
              p(""),
           ),
           
@@ -146,26 +153,47 @@ database_page <- tabPanel(
   )
 )
 
+library(dplyr)
+
+# Filter rows where keyword is not missing and get unique source_dataset values
+
 analysis_page <- tabPanel(
   title = div(icon("chart-bar", style = "margin-right: 5px;"), "Analysis"),
   
   p(""),
-  p("Upload a file below containing chromosome (chr) and starting (start) and ending (end) positions to run an analysis using a pre-trained Random Forest model and get probabilities output."),
+  p("Upload a file below containing chromosome (chr) and starting (start) and 
+    ending (end) positions to run an analysis using a pre-trained Random Forest model 
+    and get probabilities output."),
   p(""),
   
   tags$div(
     class = "rounded-grey-square",
-    selectInput("genome", tags$h6(strong("Choose a genome:")), choices = c("Select a genome" = "", unique(combined_dataset$genome)), width = '100%'),
+    selectInput("genome", 
+                tags$h6(strong("Choose a genome:")), 
+                choices = c("Select a genome" = "", unique(combined_dataset$genome)), 
+                width = '100%'),
   ),
   
   p(""),
   
   tags$div(
     class = "rounded-grey-square",
-    selectInput("paper", tags$h6(strong("Choose a paper:")), choices = c("Select a paper" = "", unique(combined_dataset$source_dataset)), width = '100%'),
-    selectInput("dc", tags$h6(strong("Choose a disease/cell type:")), choices = c("Select a disease/cell type:" = "", c("Please select a paper first"), width = '100%')),
-    selectInput("model", tags$h6(strong("Choose a model:")), choices = c("Select a model type:" = "", c("motif" = "motif", "3mer" = "3mer")), width = '100%'),
-  ),
+    
+    selectInput("paper", 
+                tags$h6(strong("Choose a paper:")), 
+                choices = c("Select a paper" = "", unique(analysis_dataset$source_dataset)), 
+                width = '100%'),
+    
+    selectInput("dc", 
+                tags$h6(strong("Choose a disease/cell type:")), 
+                choices = c("Select a disease/cell type:" = "", c("Please select a paper first"), 
+                width = '100%')),
+    
+    selectInput("model", 
+                tags$h6(strong("Choose a model:")), 
+                choices = c("Select a model type:" = "", 
+                c("motif" = "motif", "3mer" = "3mer")), 
+                width = '100%')),
   
   p(""),
   

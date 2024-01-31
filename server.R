@@ -1,17 +1,14 @@
 library(shiny)
 library(dplyr)
-library(randomForest)
 library(data.table)
-
-load("combined_dataset.RData")
-
-source("themes.R", local = TRUE)
-#source("predictions.R", local = TRUE)
+library(shinybusy)
 
 source('genetics_processed_clean/prediction.lib.R')
 source('genetics_processed_clean/genetics_lib.R')
 
-#MPRAVarDB.shinny.io
+load("combined_dataset.RData")
+
+# ----------------------------- #
 
 getFilteredDataset = function(input_chr, input_start, input_end, input_disease, input_cell) {
   filtered_data <- combined_dataset
@@ -44,10 +41,10 @@ getFilteredDataset = function(input_chr, input_start, input_end, input_disease, 
   return (filtered_data)
 }
 
+spinList <- c("circle", "fading-circle", "half-circle", "double-bounce") # apt spin themes
+
 server <- function(input, output, session) {
- # bs_themer() # preview different themes in real time, remember to change the 'theme =' in the ui.R file to right one 
-  
-  # Update browse buttons to right colors
+  # Update the browse buttons from gray to black
   
   runjs("$('#file1').parent().removeClass('btn btn-default').addClass('btn btn-dark');")
   runjs("$('#file2').parent().removeClass('btn btn-default').addClass('btn btn-dark');")
@@ -60,17 +57,19 @@ server <- function(input, output, session) {
     dt <- combined_dataset[combined_dataset$source_dataset == input$paper, ]
     
     # Update the choices in the 'dc' (disease/cell type) input
-    updateSelectInput(session, "dc",
-                      choices = c("Select a disease/cell type:" = "", 
-                                  unique(dt$celltype)))
+    
+    updateSelectInput(
+      session, 
+      "dc",
+      choices = c("Select a disease/cell type:" = "", unique(dt$celltype))
+    )
   })
   
   output$exampleDownload <- downloadHandler(
-    filename = function(){
-      paste("file_input_examples/RShinyInputTest","txt",sep=".")
-    },
+    filename = "Example.txt",
+    
     content = function(file){
-      file.copy("file_input_examples/RShinyInputTest.txt", file)
+      file.copy("file_input_examples/Example.txt", file)
     }
   )
   
@@ -80,9 +79,10 @@ server <- function(input, output, session) {
     if (!isFileAvailable) {
       shinyjs::runjs('$("#checkmark").attr("src", "error.svg");')
       shinyjs::runjs('$("#checkmark").css("visibility", "visible");')
-      return();
+      
+      return ();
     } else {
-      shinyjs::runjs('$("#checkmark").attr("src", "Checkmark.svg");')
+      shinyjs::runjs('$("#checkmark").attr("src", "checkmark.svg");')
       shinyjs::runjs('$("#checkmark").css("visibility", "visible");')
     }
     
@@ -103,9 +103,7 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$queryData, {
-    isFileAvailable <- !is.null(input$file1$datapath)
-    
-    if (isFileAvailable) {
+    if (!is.null(input$file1$datapath)) { # Checks if the input file exists
       aggregated_data <- data.frame()
       
       for(i in 1:nrow(fileSubmitted)) {
@@ -146,52 +144,43 @@ server <- function(input, output, session) {
     shinyjs::runjs('$("#checkmark").css("visibility", "hidden");')
   })
   
-  ### ANALYSIS PAGE SERVER CODE
+  ### -------------- ###
+  ###    ANALYSIS    ###
+  ### -------------- ###
   
   analysisFileLoaded <- FALSE
   
   uploadedAnalysisFile <- reactive({
-    if (is.null(input$file2)) {
-      return (NULL)
-    }
-    
-    return (fread(input$file2$datapath, header = TRUE, sep = "\t"))
+    return (if (is.null(input$file2)) NULL else (fread(input$file2$datapath, header = TRUE, sep = "\t")))
   })
   
   observeEvent(input$loadAnalysisFile, {
-    y_hats <- vector("numeric", length = nrow(analysisFile))
+    #fileUploaded <- fread(input$file2$datapath, header = TRUE, sep = "\t")
+    #y_hats <- vector("numeric", length = nrow(fileUploaded))
     
-    keyword = ""
+    show_modal_spinner(
+      spin = "half-circle",
+      color = "#2372CA",
+    )
     
-    if (input$paper == "Functional_regulatory_variants_implicate_distinct_transcriptional_networks_in_dementia") {
-      keyword = "dementia"
-    } else if (input$paper == "Genome_wide_functional_screen_of_30_UTR_variants_uncovers_causal_variants_for_human_disease_and_evolution") {
-      keyword = "evolution3UTR"
-    } else if (input$paper == "Transcriptional_regulatory_convergence_across_functional_MDD_risk_variants_identified_by_massively_parallel_reporter_assays") {
-      keyword = "MDD"  
-    } else if (input$paper == "Saturation_mutagenesis_of_twenty_disease_associated_regulatory_elements_at_single_base_pair_resolution_GRCh37_ALL") {
-      keyword == "mutagenesis"
-    } else if (input$paper == "Prioritization_of_autoimmune_disease_associated_genetic_variants_that_perturb_regulatory_element_activity_in_T_cells") {
-      keyword == "autoimmune"
-    } else if (input$paper == "Massively_parallel_reporter_assays_and_variant_scoring_identified_functional_variants_and_target_genes_for_melanoma_loci_and_highlighted_cell_type_specificity") {
-      keyword == "melanoma"
+    selected_keyword <- analysis_dataset$keyword[which(analysis_dataset$source_dataset == input$paper)[1]]
+    
+    if (length(selected_keyword) == 0 || is.na(selected_keyword)) {
+      selected_keyword <- NA_character_ 
     }
     
-    if (input$analysisFileType == "BED") {
-      data <- fread(input$file2$datapath, fill=FALSE)
-      
-      probabilities <- getProbability(data, paste0(keyword, '-', input$dc, '-', input$model), input$model, input$analysisFileType)
-    } else if (input$analysisFileType == 'FASTA') {
-      data <- readDNAStringSet(input$file2$datapath)
-      
-      print(data)
-      fac
-      probabilities <- getProbability(data, paste0(keyword, '-', input$dc, '-', input$model), input$model, input$analysisFileType)
-    }
+    model.filename <- paste0(selected_keyword, '-', input$dc, '-', input$model)
     
-    output$probabilitiesOutput <- renderDT({
-      data.frame(Probability = probabilities)
-    })
+    data <- if (input$analysisFileType == "BED") 
+                fread(input$file2$datapath, fill = FALSE) 
+            else 
+                readDNAStringSet(input$file2$datapath)
+    
+    data$probabilities <- getProbability(data, model.filename, input$model, input$analysisFileType)
+    
+    remove_modal_spinner()
+    
+    output$probabilitiesOutput <- renderDT({data})
   })
 }
 

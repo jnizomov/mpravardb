@@ -1,12 +1,17 @@
-#library(data.table)
-#library(BSgenome.Hsapiens.UCSC.hg38)
-#library(BSgenome.Hsapiens.UCSC.hg19)
-#library(chromVAR)
-#library(motifmatchr)
-#library(Matrix)
-#library(SummarizedExperiment)
-#library(TFBSTools)
-#library(JASPAR2020)
+library(BSgenome.Hsapiens.UCSC.hg38)
+library(BSgenome.Hsapiens.UCSC.hg19)
+
+library(data.table)
+
+library(chromVAR)
+library(motifmatchr)
+library(Matrix)
+library(SummarizedExperiment)
+library(TFBSTools)
+library(JASPAR2020)
+library(Biostrings)
+
+# ----------------------------- #
 
 predictROC<-function(xpos,xneg,file.name){
   library(randomForest)
@@ -59,9 +64,9 @@ getProbability <- function(x, model.name, model.type, file.type) {
   colnames(x)=c('chr','start','end')
   gr=makeGRangesFromDataFrame(x)
   
-  extendReg<-function(gr,ext=500){
-    start(gr)=start(gr)-ext
-    end(gr)=end(gr)+ext
+  extendReg<-function(gr, ext=500){
+    start(gr) = start(gr)-ext
+    end(gr) = end(gr)+ext
     gr
   }
   
@@ -74,9 +79,9 @@ getProbability <- function(x, model.name, model.type, file.type) {
     x=as.matrix(x+0)
   }
   
-  else if(model.type=='3mer'){
-    seq.ext=getSeq(genome,gr.ext)
-    x=trinucleotideFrequency(seq.ext)
+  else if(model.type=='3mer') {
+    seq.ext = Biostrings::getSeq(genome, gr.ext)
+    x = trinucleotideFrequency(seq.ext)
   }
   
   rf <- readRDS(paste0("models/", model.name, ".rds"))
@@ -91,6 +96,8 @@ getProbability <- function(x, model.name, model.type, file.type) {
 #motifs <- getMatrixSet(x = JASPAR2020, opts = list(species = 9606, all_versions = FALSE)) # human
 
 #save(motifs,file='human.motif.rda')
+
+load('human.motif.rda')
 
 evalPerf <- function(dat, id.pos, id.neg, motifs, feature.type=c('3mer','motif'), name.export, outpath, is.output=F, file.name){
   if(unique(dat$genome)=='hg38'){
@@ -120,7 +127,7 @@ evalPerf <- function(dat, id.pos, id.neg, motifs, feature.type=c('3mer','motif')
   }
   # if 3mer
   else if(feature.type=='3mer'){
-    seq.ext=getSeq(genome,gr.ext)
+    seq.ext=Biostrings::getSeq(genome,gr.ext)
     x=trinucleotideFrequency(seq.ext)
   }
   
@@ -171,7 +178,7 @@ createRevAndCropSeq<-function(dat,id.pos,id.neg,ext.crop=1000,ntimes=1,name.expo
   }
   
   gr.ext=extendReg(gr,ext=500)
-  seq.ext=getSeq(genome,gr.ext)
+  seq.ext=Biostrings::getSeq(genome,gr.ext)
   seq.ext.pos=seq.ext[id.pos]
   seq.ext.neg=seq.ext[id.neg]
   names(seq.ext.pos)=paste0('pos',1:length(seq.ext.pos))
@@ -204,7 +211,7 @@ createRevAndCropSeq<-function(dat,id.pos,id.neg,ext.crop=1000,ntimes=1,name.expo
     start(gr.crop)=starts
     end(gr.crop)=starts+1000
     summary(end(gr.crop)-start(gr.crop))
-    seq.crop=getSeq(genome,gr.crop)
+    seq.crop=Biostrings::getSeq(genome,gr.crop)
     seq.crop
   }
   
