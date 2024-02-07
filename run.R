@@ -10,3 +10,5 @@ runApp(
   host = "0.0.0.0",
   port = 19401
 )
+
+#rsync -av repository/ pubcontainer2:mpravardb/prod/
