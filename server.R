@@ -41,10 +41,10 @@ getFilteredDataset = function(input_chr, input_start, input_end, input_disease, 
   return (filtered_data)
 }
 
-spinList <- c("circle", "fading-circle", "half-circle", "double-bounce") # apt spin themes
+#spinList <- c("circle", "fading-circle", "half-circle", "double-bounce")
 
 server <- function(input, output, session) {
-  # Update the browse buttons from gray to black
+  # Update the browse buttons from gray to black to match theme
   
   runjs("$('#file1').parent().removeClass('btn btn-default').addClass('btn btn-dark');")
   runjs("$('#file2').parent().removeClass('btn btn-default').addClass('btn btn-dark');")
@@ -103,7 +103,7 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$queryData, {
-    if (!is.null(input$file1$datapath)) { # Checks if the input file exists
+    if (!is.null(input$file1$datapath)) { 
       aggregated_data <- data.frame()
       
       for(i in 1:nrow(fileSubmitted)) {
@@ -155,9 +155,6 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$loadAnalysisFile, {
-    #fileUploaded <- fread(input$file2$datapath, header = TRUE, sep = "\t")
-    #y_hats <- vector("numeric", length = nrow(fileUploaded))
-    
     show_modal_spinner(
       spin = "half-circle",
       color = "#2372CA",
@@ -171,16 +168,21 @@ server <- function(input, output, session) {
     
     model.filename <- paste0(selected_keyword, '-', input$dc, '-', input$model)
     
-    data <- if (input$analysisFileType == "BED") 
-                fread(input$file2$datapath, fill = FALSE) 
-            else 
-                readDNAStringSet(input$file2$datapath)
-    
-    data$probabilities <- getProbability(data, model.filename, input$model, input$analysisFileType)
+    if (input$analysisFileType == "BED") {
+      data <- fread(input$file2$datapath, header = TRUE, sep = "\t", fill = FALSE) 
+      probabilities <- getProbability(data, model.filename, input$model, input$analysisFileType, input$genome)
+      
+      data$probabilities <- probabilities
+    } else if (input$analysisFileType == "FASTA") {
+      data <- readDNAStringSet(input$file2$datapath)
+      probabilities <- getProbability(data, model.filename, input$model, input$analysisFileType, input$genome)
+      
+      data <- data.frame(sequence = data, probabilities)
+    }
     
     remove_modal_spinner()
     
-    output$probabilitiesOutput <- renderDT({data})
+    output$probabilitiesOutput <- renderDT(data)
   })
 }
 

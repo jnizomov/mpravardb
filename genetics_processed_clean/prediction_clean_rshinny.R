@@ -1,4 +1,3 @@
-setwd('genetics_processed_clean/')
 datapath='genetics_processed_clean/'
 
 source('prediction.lib.R')
@@ -11,7 +10,7 @@ load('human.motif.rda')
 ### paper 1: Functional regulatory variants implicate distinct transcriptional networks in dementia
 
 idata=1
-dat=fread('Functional regulatory variants implicate distinct transcriptional networks in dementia.xls')
+dat=read_xlsx('Functional regulatory variants implicate distinct transcriptional networks in dementia.xlsx')
 key.word = 'dementia'
 dim(dat)
 
@@ -45,12 +44,19 @@ for(icelltype in 1:length(celltypes)){
   id.pos=dat1$fdr<fdr.up & abs(dat1$log2FC)>log2FC.thres
   id.neg=dat1$fdr>fdr.down
   
+  print("Type: ")
+  print(typeof(dat1))
+  
   file.name = paste0(key.word, "-", celltype)
   
   message(sum(id.pos),' ',sum(id.neg))
   
+  print("3mer:")
+  
   evalPerf(dat1, id.pos, id.neg, motifs, feature.type='3mer',
            name.export=paste(paste0('data',idata),celltypes[icelltype],sep='.'), outpath, is.output=F, file.name = paste0(file.name, '-3mer'))
+  
+  print("motif:")
   
   evalPerf(dat1, id.pos, id.neg, motifs, feature.type='motif',
            name.export=paste(paste0('data',idata),celltypes[icelltype],sep='.'),outpath,is.output=F, file.name = paste0(file.name, '-motif'))

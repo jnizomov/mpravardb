@@ -58,40 +58,111 @@ predictROC<-function(xpos,xneg,file.name){
   list(model=rf,yhat=yhat)
 }
 
-getProbability <- function(x, model.name, model.type, file.type) {
+getProbability <- function(x, model.name, model.type, file.type, genome) {
   library(randomForest)
   
-  colnames(x)=c('chr','start','end')
-  gr=makeGRangesFromDataFrame(x)
-  
-  extendReg<-function(gr, ext=500){
-    start(gr) = start(gr)-ext
-    end(gr) = end(gr)+ext
-    gr
+  if (genome == "hg38") {
+    genomeSelected = BSgenome.Hsapiens.UCSC.hg38
+  } else {
+    genomeSelected = BSgenome.Hsapiens.UCSC.hg19
   }
   
-  gr.ext=extendReg(gr, ext=500)
-  
-  if(model.type=='motif'){
-    x <- matchMotifs(motifs, gr.ext, 
-                     genome = BSgenome.Hsapiens.UCSC.hg19)
-    x=x@assays@data@listData$motifMatches
-    x=as.matrix(x+0)
-  }
-  
-  else if(model.type=='3mer') {
-    seq.ext = Biostrings::getSeq(genome, gr.ext)
-    x = trinucleotideFrequency(seq.ext)
+  if(file.type=='FASTA'){
+    
+    if(model.type=='motif'){
+      x <- matchMotifs(motifs, x, 
+                       genomeSelected)
+      x=x@assays@data@listData$motifMatches
+      x=as.matrix(x+0)
+    }
+    else if(model.type=='3mer') {
+      print(x)
+      x = trinucleotideFrequency(x)
+      print('after:')
+      print(typeof(x))
+      print(dim(x))
+    }
+    
+  }else if(file.type=='BED'){
+    colnames(x)=c('chr','start','end')
+    gr=makeGRangesFromDataFrame(x)
+    extendReg<-function(gr, ext=500){
+      start(gr) = start(gr)-ext
+      end(gr) = end(gr)+ext
+      gr
+    }
+    gr.ext=extendReg(gr, ext=500)
+    if(model.type=='motif'){
+      x <- matchMotifs(motifs, gr.ext, 
+                       genomeSelected)
+      x=x@assays@data@listData$motifMatches
+      x=as.matrix(x+0)
+    }
+    else if(model.type=='3mer') {
+
+      seq.ext = Biostrings::getSeq(genomeSelected, gr.ext)
+
+      x = trinucleotideFrequency(seq.ext)
+    }
+    
   }
   
   rf <- readRDS(paste0("models/", model.name, ".rds"))
-  
   print("Random forest model loaded")
-  
   yhat<-predict(rf, x, type = "prob")[,2]
+  
+  print('yhat:')
+  print(typeof(yhat))
   
   return(yhat);
 }
+
+getProbability2 <- function(x, model.name, model.type, file.type, genome) {
+  library(randomForest)
+  
+  if (file.type == 'BED') {
+    print("Running BED code")
+    
+    colnames(x) = c('chr', 'start', 'end')
+    gr = makeGRangesFromDataFrame(x)
+    
+    extendReg <- function(gr, ext = 500) {
+      start(gr) = start(gr) - ext
+      end(gr) = end(gr) + ext
+      gr
+    }
+    
+    gr.ext = extendReg(gr, ext = 500)
+    
+    if (model.type == '3mer') {
+      seq.ext = getSeq(genome, gr.ext)
+      x = trinucleotideFrequency(seq.ext)
+    }
+  } else if (file.type == 'FASTA') {
+    print("Running FASTA code")
+    if (model.type == '3mer') {
+      # Directly calculate trinucleotide frequencies from the DNAStringSet
+      # Assuming x is a DNAStringSet here
+      x = lapply(as.list(x), trinucleotideFrequency)
+      x = do.call(rbind, x) # Convert list of matrices to a single matrix
+    }
+    # Note: You might need to adjust this part based on how you want to handle FASTA inputs for motif models
+  }
+  
+  if (model.type == 'motif' && file.type == 'BED') {
+    x <- matchMotifs(motifs, gr.ext, genome)
+    x = x@assays@data@listData$motifMatches
+    x = as.matrix(x + 0)
+  }
+  
+  rf <- readRDS(paste0("models/", model.name, ".rds"))
+  print("Random forest model loaded")
+  
+  yhat <- predict(rf, x, type = "prob")[,2]
+  
+  return(yhat)
+}
+
 
 #motifs <- getMatrixSet(x = JASPAR2020, opts = list(species = 9606, all_versions = FALSE)) # human
 
@@ -127,7 +198,7 @@ evalPerf <- function(dat, id.pos, id.neg, motifs, feature.type=c('3mer','motif')
   }
   # if 3mer
   else if(feature.type=='3mer'){
-    seq.ext=Biostrings::getSeq(genome,gr.ext)
+    seq.ext=Biostrings::getSeq(genome, gr.ext)
     x=trinucleotideFrequency(seq.ext)
   }
   

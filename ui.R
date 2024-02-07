@@ -4,7 +4,6 @@ library(shinythemes)
 library(dplyr)
 library(shinyWidgets)
 library(shinybusy)
-#library(bslib)
 
 source("themes.R", local = TRUE)
 
@@ -328,7 +327,7 @@ ui <- fluidPage(
   
   fluidRow(
     navbarPage(
-      theme = custom, #theme = bs_theme(bootswatch = "united"),
+      theme = custom, 
       inverse = TRUE,
       id = "myNavbar", 
       title = project_title,
