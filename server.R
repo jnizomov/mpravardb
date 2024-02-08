@@ -3,11 +3,26 @@ library(dplyr)
 library(data.table)
 library(shinybusy)
 
+load("combined_dataset.RData")
+load("analysis_dataset.RData")
+
 source('genetics_processed_clean/prediction.lib.R')
+source('genetics_processed_clean/model_extraction.R')
+#source('genetics_processed_clean/genetics_lib.R')
 
 # ----------------------------- #
 
+getPaperByKeyword = function(keyword) {
+  return (analysis_dataset$source_dataset[which(analysis_dataset$keyword == keyword)[1]]);
+}
+
+getKeywordByPaper = function(paper) {
+  return (analysis_dataset$keyword[which(analysis_dataset$source_dataset == paper)[1]]);
+}
+
 getFilteredDataset = function(input_chr, input_start, input_end, input_disease, input_cell) {
+  # Additional server logic as needed
+  
   filtered_data <- combined_dataset
   
   if (input_cell != "" && !is.na(input_cell)) {
@@ -38,7 +53,9 @@ getFilteredDataset = function(input_chr, input_start, input_end, input_disease, 
   return (filtered_data)
 }
 
-#spinList <- c("circle", "fading-circle", "half-circle", "double-bounce")
+# -------------------------- #
+#       Server Logic 
+# -------------------------- #
 
 server <- function(input, output, session) {
   # Update the browse buttons from gray to black to match theme
@@ -51,16 +68,25 @@ server <- function(input, output, session) {
   isFileAvailable <- FALSE
   
   observeEvent(input$paper, {
-    dt <- combined_dataset[combined_dataset$source_dataset == input$paper, ]
+    dt <- analysis_dataset[analysis_dataset$source_dataset == input$paper, ]
     
     # Update the choices in the 'dc' (disease/cell type) input
     
     updateSelectInput(
       session, 
       "dc",
-      choices = c("Select a disease/cell type:" = "", unique(dt$celltype))
+      choices = c("Select a disease/cell type:" = "", unique(models_df$disease_celltype[models_df$keyword == getKeywordByPaper(input$paper)]))
     )
   })
+  
+  observeEvent(input$dc, {
+    updateSelectInput(
+      session, 
+      "model",
+      choices = c("Select a model type:" = "", unique(models_df$model_type[models_df$keyword == getKeywordByPaper(input$paper) & 
+                                              models_df$disease_celltype == input$dc]))
+      )
+  }) 
   
   output$exampleDownload <- downloadHandler(
     filename = "Example.txt",
@@ -157,7 +183,9 @@ server <- function(input, output, session) {
       color = "#2372CA",
     )
     
-    selected_keyword <- analysis_dataset$keyword[which(analysis_dataset$source_dataset == input$paper)[1]]
+    
+    
+    selected_keyword <- getKeywordByPaper(input$paper)
     
     if (length(selected_keyword) == 0 || is.na(selected_keyword)) {
       selected_keyword <- NA_character_ 

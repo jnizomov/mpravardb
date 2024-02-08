@@ -35,21 +35,20 @@ database_page <- tabPanel(
           ),
           
           column(width = 6, 
-             #tags$div(class = "header-spacing"),
              selectInput("cell_line", "Cell Line:", choices = c("Select a cell line" = "", unique(combined_dataset$celltype)), width = '100%'),
           )
         ),
         fluidRow(
           column(width = 4,
-              numericInput("chr", "Chromosome:", value = NULL, width = '100%'),
+              numericInput("chr", "Chromosome:", value = NULL, width = '100%', min = 1),
           ),
           
           column(width = 4,
-              numericInput("start_position", "Start Position:", value = NULL, width = '100%'),
+              numericInput("start_position", "Start Position:", value = NULL, width = '100%', min = 1),
           ),
           
           column(width = 4,
-              numericInput("end_position", "End Position:", value = NULL, width = '100%'),
+              numericInput("end_position", "End Position:", value = NULL, width = '100%', min = 1),
           ),
         ),
         
@@ -225,7 +224,7 @@ about_page <- tabPanel(
   
   tags$h5(strong("Instructions")),
   tags$hr(),
-  p("This app is on version 2."),
+  p("This app is on version 5."),
   p("Text here.")
 )
 
