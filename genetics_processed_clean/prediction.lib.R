@@ -117,53 +117,6 @@ getProbability <- function(x, model.name, model.type, file.type, genome) {
   return(yhat);
 }
 
-getProbability2 <- function(x, model.name, model.type, file.type, genome) {
-  library(randomForest)
-  
-  if (file.type == 'BED') {
-    print("Running BED code")
-    
-    colnames(x) = c('chr', 'start', 'end')
-    gr = makeGRangesFromDataFrame(x)
-    
-    extendReg <- function(gr, ext = 500) {
-      start(gr) = start(gr) - ext
-      end(gr) = end(gr) + ext
-      gr
-    }
-    
-    gr.ext = extendReg(gr, ext = 500)
-    
-    if (model.type == '3mer') {
-      seq.ext = getSeq(genome, gr.ext)
-      x = trinucleotideFrequency(seq.ext)
-    }
-  } else if (file.type == 'FASTA') {
-    print("Running FASTA code")
-    if (model.type == '3mer') {
-      # Directly calculate trinucleotide frequencies from the DNAStringSet
-      # Assuming x is a DNAStringSet here
-      x = lapply(as.list(x), trinucleotideFrequency)
-      x = do.call(rbind, x) # Convert list of matrices to a single matrix
-    }
-    # Note: You might need to adjust this part based on how you want to handle FASTA inputs for motif models
-  }
-  
-  if (model.type == 'motif' && file.type == 'BED') {
-    x <- matchMotifs(motifs, gr.ext, genome)
-    x = x@assays@data@listData$motifMatches
-    x = as.matrix(x + 0)
-  }
-  
-  rf <- readRDS(paste0("models/", model.name, ".rds"))
-  print("Random forest model loaded")
-  
-  yhat <- predict(rf, x, type = "prob")[,2]
-  
-  return(yhat)
-}
-
-
 #motifs <- getMatrixSet(x = JASPAR2020, opts = list(species = 9606, all_versions = FALSE)) # human
 
 #save(motifs,file='human.motif.rda')

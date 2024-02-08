@@ -8,6 +8,7 @@ library(shinybusy)
 source("themes.R", local = TRUE)
 
 load("combined_dataset.RData")
+load("analysis_dataset.RData")
 
 project_title <- "MRPAVarDB"
 
@@ -224,7 +225,7 @@ about_page <- tabPanel(
   
   tags$h5(strong("Instructions")),
   tags$hr(),
-  p("Some text here."),
+  p("This app is on version 1."),
   p("Text here.")
 )
 

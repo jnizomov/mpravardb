@@ -4,9 +4,10 @@ library(data.table)
 library(shinybusy)
 
 source('genetics_processed_clean/prediction.lib.R')
-source('genetics_processed_clean/genetics_lib.R')
+#source('genetics_processed_clean/genetics_lib.R')
 
 load("combined_dataset.RData")
+load("analysis_dataset.RData")
 
 # ----------------------------- #
 

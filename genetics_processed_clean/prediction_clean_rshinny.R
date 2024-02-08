@@ -1,7 +1,7 @@
 datapath='genetics_processed_clean/'
 
 source('prediction.lib.R')
-source('genetics_lib.R')
+#source('genetics_lib.R')
 
 load('gene.ref.rda')
 load('human.motif.rda')
