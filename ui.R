@@ -225,7 +225,7 @@ about_page <- tabPanel(
   
   tags$h5(strong("Instructions")),
   tags$hr(),
-  p("This app is on version 1."),
+  p("This app is on version 2."),
   p("Text here.")
 )
 

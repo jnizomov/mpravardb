@@ -1,15 +1,12 @@
-library(BSgenome.Hsapiens.UCSC.hg38)
-library(BSgenome.Hsapiens.UCSC.hg19)
-
 library(data.table)
 
-library(chromVAR)
+#library(chromVAR)
 library(motifmatchr)
 library(Matrix)
 library(SummarizedExperiment)
-library(TFBSTools)
-library(JASPAR2020)
-library(Biostrings)
+#library(TFBSTools)
+#library(JASPAR2020)
+
 
 # ----------------------------- #
 
@@ -60,10 +57,15 @@ predictROC<-function(xpos,xneg,file.name){
 
 getProbability <- function(x, model.name, model.type, file.type, genome) {
   library(randomForest)
+  library(Biostrings)
   
   if (genome == "hg38") {
+    library(BSgenome.Hsapiens.UCSC.hg38)
+    
     genomeSelected = BSgenome.Hsapiens.UCSC.hg38
   } else {
+    library(BSgenome.Hsapiens.UCSC.hg19)
+    
     genomeSelected = BSgenome.Hsapiens.UCSC.hg19
   }
   
