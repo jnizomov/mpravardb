@@ -67,6 +67,55 @@ server <- function(input, output, session) {
   fileSubmitted <- NA
   isFileAvailable <- FALSE
   
+  observeEvent(input$cell_line, {
+    if (input$cell_line == "") {
+      return();
+    }
+    
+    disease_choices = unique(combined_dataset$disease[combined_dataset$celltype == input$cell_line])
+    
+    if (input$disease %in% disease_choices) {
+      updateSelectInput(
+        session,
+        "disease",
+        choices = c("Select a disease" = "", disease_choices),
+        selected = input$disease
+      )
+    } else {
+      updateSelectInput(
+        session,
+        "disease",
+        choices = c("Select a disease" = "", disease_choices),
+        selected = NULL
+      )
+    }
+  })
+  
+  observeEvent(input$disease, {
+    if (input$disease == "") {
+  
+      return();
+    }
+    
+    cell_choices = unique(combined_dataset$celltype[combined_dataset$disease == input$disease])
+    
+    if (input$cell_line %in% cell_choices) {
+      updateSelectInput(
+        session,
+        "cell_line",
+        choices = c("Select a cell line" = "", cell_choices),
+        selected = input$cell_line
+      )
+    } else {
+      updateSelectInput(
+        session,
+        "cell_line",
+        choices = c("Select a cell line" = "", cell_choices),
+        selected = NULL
+      )
+    }
+  })
+  
   observeEvent(input$paper, {
     dt <- analysis_dataset[analysis_dataset$source_dataset == input$paper, ]
     
@@ -163,6 +212,18 @@ server <- function(input, output, session) {
     updateNumericInput(session, "start_position", value = "")
     updateNumericInput(session, "end_position", value = "")
     updateNumericInput(session, "file1", value = "")
+    
+    updateSelectInput(
+      session,
+      "disease",
+      choices = c("Select a disease" = "", unique(combined_dataset$disease[!combined_dataset$disease %in% c("None", "NA")])),
+    )
+    
+    updateSelectInput(
+      session,
+      "cell_line",
+      choices = c("Select a cell line" = "", unique(combined_dataset$celltype)),
+    )
     
     shinyjs::runjs('$("#checkmark").css("visibility", "hidden");')
   })

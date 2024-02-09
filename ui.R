@@ -31,7 +31,7 @@ database_page <- tabPanel(
         title = "Custom Inputs",
         fluidRow(
           column(width = 6,
-             selectInput("disease", "Disease:", choices = c("Select a disease" = "", unique(combined_dataset$disease)), width = '100%')
+             selectInput("disease", "Disease:", choices = c("Select a disease" = "", unique(combined_dataset$disease[!combined_dataset$disease %in% c("None", "NA")])), width = '100%')
           ),
           
           column(width = 6, 
@@ -224,7 +224,7 @@ about_page <- tabPanel(
   
   tags$h5(strong("Instructions")),
   tags$hr(),
-  p("This app is on version 5."),
+  p("This app is on version 6."),
   p("Text here.")
 )
 
