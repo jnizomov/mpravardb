@@ -2,8 +2,6 @@ library(dplyr)
 library(openxlsx)
 library(readxl)
 
-print("I am running")
-
 # --------------- #
 
 # Convert columns to appropriate data types
