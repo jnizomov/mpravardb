@@ -58,6 +58,10 @@ database_page <- tabPanel(
     
       p(""),
     
+      actionButton("browseQuery", "Run Query", width = '100%', class = "btn btn-primary", icon = icon("check")),
+  
+      p(""),
+    
       fluidRow(
         column(width = 12,  
                tags$div(
@@ -68,14 +72,8 @@ database_page <- tabPanel(
       ),
     
       p(""),
-    
-      actionButton("browseQuery", "Run Query", width = '100%', class = "btn btn-primary", icon = icon("check")),
       
-      p(""),
-    
-      fluidPage(
-        uiOutput("browseDownloadButton")  # Placeholder for the download button (appears after Run Query)
-      ),
+      uiOutput("browseDownloadButton"),  # Placeholder for the download button (appears after Run Query)
     ),
     
     conditionalPanel(
@@ -165,6 +163,10 @@ database_page <- tabPanel(
     
       p(""),
     
+      actionButton("customQuery", "Run Query", width = '100%', class = "btn btn-primary", icon = icon("check")),
+    
+      p(""),
+    
       fluidRow(
         column(width = 12,  
                tags$div(
@@ -173,14 +175,10 @@ database_page <- tabPanel(
                )
         )
       ),
-      
-      actionButton("customQuery", "Run Query", width = '100%', class = "btn btn-primary", icon = icon("check")),
-      
-      p(""),
     
-      fluidPage(
-        uiOutput("customDownloadButton")  # Placeholder for the download button (appears after Run Query)
-      ),
+      p(""),
+      
+      uiOutput("customDownloadButton")  # Placeholder for the download button (appears after Run Query)
   ),
 
   p(""),
@@ -218,7 +216,7 @@ analysis_page <- tabPanel(
                 choices = c("Select a paper" = "", unique(analysis_dataset$source_dataset)), 
                 width = '100%'),
     
-    selectInput("dc", 
+    selectInput("disease_celltype", 
                 tags$h6(strong("Choose a disease/cell type:")), 
                 choices = c("Select a disease/cell type:" = "", c("Please select a paper first"), 
                 width = '100%')),
@@ -244,7 +242,18 @@ analysis_page <- tabPanel(
   tags$hr(),
   p(""),
   
-  DTOutput("probabilitiesOutput"),
+  fluidRow(
+    column(width = 12,  
+           tags$div(
+             class = "scrollable-table", 
+             uiOutput("probabilitiesOutput")
+           )
+    )
+  ),
+  
+  p(""),
+  
+  uiOutput("probabilitiesDownloadButton"),  # Placeholder for the download button (appears after Run Query)
 )
 
 about_page <- tabPanel(

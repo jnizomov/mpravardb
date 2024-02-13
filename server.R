@@ -2,6 +2,7 @@ library(shiny)
 library(dplyr)
 library(data.table)
 library(shinybusy)
+library(Biostrings)
 
 load("combined_dataset.RData")
 load("analysis_dataset.RData")
@@ -59,7 +60,7 @@ getFilteredDataset = function(input_chr, input_start, input_end, input_disease, 
 
 getFileNameFromInputs <- function(disease, cell_line, chr, start_position, end_position) {
   parts <- c()
-  
+
   if (!is.na(disease) && !is.null(disease) && disease != "") parts <- c(parts, disease)
   if (!is.na(cell_line) && !is.null(cell_line) && cell_line != "") parts <- c(parts, cell_line)
   if (!is.na(chr) && !is.null(chr) && chr != "") parts <- c(parts, chr)
@@ -85,6 +86,7 @@ server <- function(input, output, session) {
   
   browseQueryRun <- reactiveVal(FALSE)
   customQueryRun <- reactiveVal(FALSE)
+  probabilitiesQueryRun <- reactiveVal(FALSE)
   
   ### ------------------- ###
   ###    DATABASE TAB     ###
@@ -93,10 +95,11 @@ server <- function(input, output, session) {
   # Browse Database Section
   
   output$browseDownloadTable <- downloadHandler(
-    filename = getFileNameFromInputs(input$disease, input$cell_line, input$chr, input$start_position, input$end_position),
+    filename = function() {
+      getFileNameFromInputs(input$disease, input$cell_line, input$chr, input$start_position, input$end_position)
+    },
     
     content = function(file) {
-      print("Downloading browse table")
       write.csv(browse_filtered_data(), file, row.names = FALSE)
     }
   )
@@ -107,6 +110,7 @@ server <- function(input, output, session) {
         outputId = "browseDownloadTable",
         label = "Download",
         class = "btn btn-dark",
+        style = "width:100%;"
       )
     }
   })
@@ -261,6 +265,7 @@ server <- function(input, output, session) {
         outputId = "customDownloadTable",
         label = "Download",
         class = "btn btn-dark",
+        style = "width:100%;"
       )
     }
   })
@@ -307,31 +312,36 @@ server <- function(input, output, session) {
   ###    ANALYSIS TAB     ###
   ### ------------------- ###
   
-  #uploadedAnalysisFile <- reactive({return (if (is.null(input$file2)) NULL else (fread(input$file2$datapath, header = TRUE, sep = "\t")))})
+  model.filename <- reactiveVal("")
+  probabilitiesOutput <- reactiveVal(data.frame())
   
   observeEvent(input$paper, {
     dt <- analysis_dataset[analysis_dataset$source_dataset == input$paper, ]
     
-    # Update the choices in the 'dc' (disease/cell type) input
+    # Update the choices in the 'disease_celltype' input based on selected paper
     
     updateSelectInput(
       session, 
-      "dc",
+      "disease_celltype",
       choices = c("Select a disease/cell type:" = "", unique(models_df$disease_celltype[models_df$keyword == getKeywordByPaper(input$paper)]))
     )
   })
   
-  observeEvent(input$dc, {
+  observeEvent(input$disease_celltype, {
+    # Update the choices in the 'model' input based on selected disease_celltype (validation)
+    
     updateSelectInput(
       session, 
       "model",
       choices = c("Select a model type:" = "", 
-                  unique(models_df$model_type[models_df$keyword == getKeywordByPaper(input$paper) & models_df$disease_celltype == input$dc])
+                  unique(models_df$model_type[models_df$keyword == getKeywordByPaper(input$paper) & models_df$disease_celltype == input$disease_celltype])
       )
     )
   }) 
   
   observeEvent(input$loadAnalysisFile, {
+    probabilitiesQueryRun(FALSE)
+    
     show_modal_spinner(
       spin = "half-circle",
       color = "#2372CA",
@@ -343,26 +353,55 @@ server <- function(input, output, session) {
       selected_keyword <- NA_character_ 
     }
     
-    model.filename <- paste0(selected_keyword, '-', input$dc, '-', input$model)
+    model.filename(paste0(selected_keyword, '-', input$disease_celltype, '-', input$model))
     
     if (input$analysisFileType == "BED") {
       data <- fread(input$analysisFile$datapath, header = TRUE, sep = "\t", fill = FALSE) 
-      probabilities <- getProbability(data, model.filename, input$model, input$analysisFileType, input$genome)
+      probabilities <- getProbability(data, model.filename(), input$model, input$analysisFileType, input$genome)
       
       data$probabilities <- probabilities
     } else if (input$analysisFileType == "FASTA") {
       data <- readDNAStringSet(input$analysisFile$datapath)
-      probabilities <- getProbability(data, model.filename, input$model, input$analysisFileType, input$genome)
+      probabilities <- getProbability(data, model.filename(), input$model, input$analysisFileType, input$genome)
       
       data <- data.frame(sequence = data, probabilities)
     }
     
+    probabilitiesOutput(data) # sets reactive probabilityOutput to data for downloading purposes
+    
     remove_modal_spinner()
     
-    output$probabilitiesOutput <- renderDT(
-      data,
-      options = list(scrollX = TRUE)
-    )
+    probabilitiesQueryRun(TRUE)
+  })
+  
+  output$probabilitiesDownloadTable <- downloadHandler(
+    filename = function() {
+      paste0(model.filename(), ".csv")
+    },
+    
+    content = function(file) {
+      write.csv(probabilitiesOutput(), file, row.names = FALSE)
+    }
+  )
+  
+  output$probabilitiesDownloadButton <- renderUI({
+    if(probabilitiesQueryRun()) {
+      downloadButton(
+        outputId = "probabilitiesDownloadTable",
+        label = "Download",
+        class = "btn btn-dark",
+        style = "width:100%;"
+      )
+    }
+  })
+  
+  output$probabilitiesOutput <- renderUI({
+    if(probabilitiesQueryRun()) {
+      renderDT(
+        probabilitiesOutput(), 
+        options = list(scrollX = TRUE)
+      )
+    }
   })
 }
 
