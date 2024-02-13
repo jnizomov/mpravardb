@@ -57,15 +57,74 @@ getFilteredDataset = function(input_chr, input_start, input_end, input_disease, 
 #       Server Logic 
 # -------------------------- #
 
+getFileNameFromInputs <- function(disease, cell_line, chr, start_position, end_position) {
+  parts <- c()
+  
+  if (!is.na(disease) && !is.null(disease) && disease != "") parts <- c(parts, disease)
+  if (!is.na(cell_line) && !is.null(cell_line) && cell_line != "") parts <- c(parts, cell_line)
+  if (!is.na(chr) && !is.null(chr) && chr != "") parts <- c(parts, chr)
+  if (!is.na(start_position) && !is.null(start_position) && start_position != "") parts <- c(parts, start_position)
+  if (!is.na(end_position) && !is.null(end_position) && end_position != "") parts <- c(parts, end_position)
+  
+  filename <- ifelse(length(parts) > 0, paste(parts, collapse = "_"), "mpra_data")
+  
+  return (paste0(filename, ".csv"));
+}
+
 server <- function(input, output, session) {
   # Update the browse buttons from gray to black to match theme
   
-  runjs("$('#file1').parent().removeClass('btn btn-default').addClass('btn btn-dark');")
-  runjs("$('#file2').parent().removeClass('btn btn-default').addClass('btn btn-dark');")
+  runjs("$('#customFile').parent().removeClass('btn btn-default').addClass('btn btn-dark');")
+  runjs("$('#analysisFile').parent().removeClass('btn btn-default').addClass('btn btn-dark');")
   
-  filtered_data <- combined_dataset
-  fileSubmitted <- NA
-  isFileAvailable <- FALSE
+  browse_filtered_data <- reactiveVal(combined_dataset)
+  custom_filtered_data <- reactiveVal(data.frame())
+  
+  fileSubmitted <- reactiveVal(NA)
+  customFileExists <- reactiveVal(FALSE)
+  
+  browseQueryRun <- reactiveVal(FALSE)
+  customQueryRun <- reactiveVal(FALSE)
+  
+  ### ------------------- ###
+  ###    DATABASE TAB     ###
+  ### ------------------- ###
+  
+  # Browse Database Section
+  
+  output$browseDownloadTable <- downloadHandler(
+    filename = getFileNameFromInputs(input$disease, input$cell_line, input$chr, input$start_position, input$end_position),
+    
+    content = function(file) {
+      print("Downloading browse table")
+      write.csv(browse_filtered_data(), file, row.names = FALSE)
+    }
+  )
+  
+  output$browseDownloadButton <- renderUI({
+    if(browseQueryRun()) {
+      downloadButton(
+        outputId = "browseDownloadTable",
+        label = "Download",
+        class = "btn btn-dark",
+      )
+    }
+  })
+  
+  output$browseQueryTable <- renderUI({
+    if(browseQueryRun()) {
+      renderDT(
+        browse_filtered_data(), 
+        options = list(scrollX = TRUE)
+      )
+    }
+  })
+  
+  observeEvent(input$browseQuery, {
+    browse_filtered_data(getFilteredDataset(input$chr, input$start_position, input$end_position, input$disease, input$cell_line))
+    
+    browseQueryRun(TRUE)
+  })
   
   observeEvent(input$cell_line, {
     if (input$cell_line == "") {
@@ -116,6 +175,140 @@ server <- function(input, output, session) {
     }
   })
   
+  observeEvent(input$reset, {
+    updateNumericInput(session, "cell_line", value = "")
+    updateNumericInput(session, "disease", value = "")
+    updateNumericInput(session, "chr", value = "")
+    updateNumericInput(session, "start_position", value = "")
+    updateNumericInput(session, "end_position", value = "")
+    updateNumericInput(session, "customFile", value = "")
+    
+    browseQueryRun(FALSE)
+    
+    updateSelectInput(
+      session,
+      "disease",
+      choices = c("Select a disease" = "", unique(combined_dataset$disease[!combined_dataset$disease %in% c("None", "NA")])),
+    )
+    
+    updateSelectInput(
+      session,
+      "cell_line",
+      choices = c("Select a cell line" = "", unique(combined_dataset$celltype)),
+    )
+    
+    shinyjs::runjs('$("#checkmark").css("visibility", "hidden");')
+  })
+
+  
+  # Upload a Custom File Section
+  
+  output$exampleDownload <- downloadHandler(
+    filename = "Example.txt",
+    
+    content = function(file){
+      file.copy("file_input_examples/Example.txt", file)
+    }
+  )
+  
+  shinyjs::runjs('
+    $("#customFile").on("click", function() {
+      $("#checkmark").css("visibility", "hidden");
+    });
+  ')
+  
+  observeEvent(input$loadFile, {
+    customFileExists(!is.null(input$customFile$datapath))
+    customQueryRun(FALSE)
+    
+    if (!customFileExists()) {
+      shinyjs::runjs('$("#checkmark").attr("src", "error.svg");')
+      shinyjs::runjs('$("#checkmark").css("visibility", "visible");')
+      
+      return ();
+    } else {
+      shinyjs::runjs('$("#checkmark").attr("src", "checkmark.svg");')
+      shinyjs::runjs('$("#checkmark").css("visibility", "visible");')
+    }
+    
+    fileSubmitted(fread(input$customFile$datapath, fill=FALSE))
+    
+    output$filePreview <- renderTable({
+      return (head(fileSubmitted()))
+    })
+    
+    output$previewUI <- renderUI({
+      if (grepl("\\.txt$", input$customFile$name)) {
+        fluidPage(
+          h1(strong("Preview your file"), style = "font-size:20px; margin-top: 5px"),
+          div(class = "scrollable-table", tableOutput("filePreview"))
+        )
+      }
+    })
+  })
+  
+  output$customDownloadTable <- downloadHandler(
+    filename = paste0(ifelse (customFileExists(), input$customFile$name, "custom_query"), ".csv"),
+    
+    content = function(file) {
+      write.csv(custom_filtered_data(), file, row.names = FALSE)
+    }
+  )
+  
+  output$customDownloadButton <- renderUI({
+    if(customQueryRun()) {
+      downloadButton(
+        outputId = "customDownloadTable",
+        label = "Download",
+        class = "btn btn-dark",
+      )
+    }
+  })
+  
+  output$customQueryTable <- renderUI({
+    if(customQueryRun()) {
+      renderDT(
+        custom_filtered_data(), 
+        options = list(scrollX = TRUE)
+      )
+    }
+  })
+  
+  observeEvent(input$customQuery, {
+    if (!is.null(input$customFile$datapath)) { 
+      aggregated_data <- data.frame()
+      
+      for(i in 1:nrow(fileSubmitted())) {
+        row <- fileSubmitted()[i,]
+        
+        disease_column = NA # optional 
+        cell_line_column = NA # optional 
+        
+        if (ncol(fileSubmitted()) >= 4) {
+          disease_column <- row[[4]]
+        }
+        
+        if (ncol(fileSubmitted()) >= 5) {
+          cell_line_column <- row[[5]]
+        }
+        
+        filter_result <- getFilteredDataset(row[[1]], row[[2]], row[[3]], disease_column, cell_line_column)
+        
+        aggregated_data <- rbind(aggregated_data, filter_result)
+      }
+      
+      custom_filtered_data(aggregated_data)
+    }
+    
+    customQueryRun(TRUE)
+  })
+  
+  ### ------------------- ###
+  ###    ANALYSIS TAB     ###
+  ### ------------------- ###
+  
+  #uploadedAnalysisFile <- reactive({return (if (is.null(input$file2)) NULL else (fread(input$file2$datapath, header = TRUE, sep = "\t")))})
+  
   observeEvent(input$paper, {
     dt <- analysis_dataset[analysis_dataset$source_dataset == input$paper, ]
     
@@ -132,119 +325,17 @@ server <- function(input, output, session) {
     updateSelectInput(
       session, 
       "model",
-      choices = c("Select a model type:" = "", unique(models_df$model_type[models_df$keyword == getKeywordByPaper(input$paper) & 
-                                              models_df$disease_celltype == input$dc]))
+      choices = c("Select a model type:" = "", 
+                  unique(models_df$model_type[models_df$keyword == getKeywordByPaper(input$paper) & models_df$disease_celltype == input$dc])
       )
+    )
   }) 
-  
-  output$exampleDownload <- downloadHandler(
-    filename = "Example.txt",
-    
-    content = function(file){
-      file.copy("file_input_examples/Example.txt", file)
-    }
-  )
-  
-  observeEvent(input$loadFile, {
-    isFileAvailable <- !is.null(input$file1$datapath)
-    
-    if (!isFileAvailable) {
-      shinyjs::runjs('$("#checkmark").attr("src", "error.svg");')
-      shinyjs::runjs('$("#checkmark").css("visibility", "visible");')
-      
-      return ();
-    } else {
-      shinyjs::runjs('$("#checkmark").attr("src", "checkmark.svg");')
-      shinyjs::runjs('$("#checkmark").css("visibility", "visible");')
-    }
-    
-    fileSubmitted <<- fread(input$file1$datapath, fill=FALSE)
-    
-    output$filePreview <- renderTable({
-      return (head(fileSubmitted))
-    })
-    
-    output$previewUI <- renderUI({
-      if (grepl("\\.txt$", input$file1$name)) {
-        fluidPage(
-          h1(strong("Preview your file"), style = "font-size:20px; margin-top: 5px"),
-          div(class = "scrollable-table", tableOutput("filePreview"))
-        )
-      }
-    })
-  })
-  
-  observeEvent(input$queryData, {
-    if (!is.null(input$file1$datapath)) { 
-      aggregated_data <- data.frame()
-      
-      for(i in 1:nrow(fileSubmitted)) {
-        row <- fileSubmitted[i,]
-        
-        disease_column = NA # optional 
-        cell_line_column = NA # optional 
-        
-        if (ncol(fileSubmitted) >= 4) {
-          disease_column <- row[[4]]
-        }
-        
-        if (ncol(fileSubmitted) >= 5) {
-          cell_line_column <- row[[5]]
-        }
-        
-        filter_result <- getFilteredDataset(row[[1]], row[[2]], row[[3]], disease_column, cell_line_column)
-        
-        aggregated_data <- rbind(aggregated_data, filter_result)
-      }
-      
-      filtered_data <- aggregated_data
-    } else {
-      filtered_data <- getFilteredDataset(input$chr, input$start_position, input$end_position, input$disease, input$cell_line)
-    }
-    
-    output$table <- renderDT({filtered_data}, options=list(scrollX=T))
-  })
-  
-  observeEvent(input$reset, {
-    updateNumericInput(session, "cell_line", value = "")
-    updateNumericInput(session, "disease", value = "")
-    updateNumericInput(session, "chr", value = "")
-    updateNumericInput(session, "start_position", value = "")
-    updateNumericInput(session, "end_position", value = "")
-    updateNumericInput(session, "file1", value = "")
-    
-    updateSelectInput(
-      session,
-      "disease",
-      choices = c("Select a disease" = "", unique(combined_dataset$disease[!combined_dataset$disease %in% c("None", "NA")])),
-    )
-    
-    updateSelectInput(
-      session,
-      "cell_line",
-      choices = c("Select a cell line" = "", unique(combined_dataset$celltype)),
-    )
-    
-    shinyjs::runjs('$("#checkmark").css("visibility", "hidden");')
-  })
-  
-  ### -------------- ###
-  ###    ANALYSIS    ###
-  ### -------------- ###
-  
-  analysisFileLoaded <- FALSE
-  
-  uploadedAnalysisFile <- reactive({
-    return (if (is.null(input$file2)) NULL else (fread(input$file2$datapath, header = TRUE, sep = "\t")))
-  })
   
   observeEvent(input$loadAnalysisFile, {
     show_modal_spinner(
       spin = "half-circle",
       color = "#2372CA",
     )
-    
-    
     
     selected_keyword <- getKeywordByPaper(input$paper)
     
@@ -255,12 +346,12 @@ server <- function(input, output, session) {
     model.filename <- paste0(selected_keyword, '-', input$dc, '-', input$model)
     
     if (input$analysisFileType == "BED") {
-      data <- fread(input$file2$datapath, header = TRUE, sep = "\t", fill = FALSE) 
+      data <- fread(input$analysisFile$datapath, header = TRUE, sep = "\t", fill = FALSE) 
       probabilities <- getProbability(data, model.filename, input$model, input$analysisFileType, input$genome)
       
       data$probabilities <- probabilities
     } else if (input$analysisFileType == "FASTA") {
-      data <- readDNAStringSet(input$file2$datapath)
+      data <- readDNAStringSet(input$analysisFile$datapath)
       probabilities <- getProbability(data, model.filename, input$model, input$analysisFileType, input$genome)
       
       data <- data.frame(sequence = data, probabilities)
@@ -268,7 +359,10 @@ server <- function(input, output, session) {
     
     remove_modal_spinner()
     
-    output$probabilitiesOutput <- renderDT(data)
+    output$probabilitiesOutput <- renderDT(
+      data,
+      options = list(scrollX = TRUE)
+    )
   })
 }
 

@@ -18,138 +18,173 @@ database_page <- tabPanel(
   title = div(icon("database", style = "margin-right: 5px;"), "Database"),
   
   radioGroupButtons(
-    inputId = "Id01",
+    inputId = "Database_Section",
     label = "",
     choices = c("Browse Database", "Upload a Custom File"),
     justified = TRUE
   ),
   
-  tags$div(class = "rounded-grey-square",
-    conditionalPanel(
-      condition = "input.Id01 == 'Browse Database'",
-      tabPanel(
-        title = "Custom Inputs",
-        fluidRow(
-          column(width = 6,
-             selectInput("disease", "Disease:", choices = c("Select a disease" = "", unique(combined_dataset$disease[!combined_dataset$disease %in% c("None", "NA")])), width = '100%')
+  conditionalPanel(
+    condition = "input.Database_Section == 'Browse Database'",
+    tags$div(class = "rounded-grey-square", 
+        tabPanel(
+          title = "Custom Inputs",
+          fluidRow(
+            column(width = 6,
+               selectInput("disease", "Disease:", choices = c("Select a disease" = "", unique(combined_dataset$disease[!combined_dataset$disease %in% c("None", "NA")])), width = '100%')
+            ),
+            
+            column(width = 6, 
+               selectInput("cell_line", "Cell Line:", choices = c("Select a cell line" = "", unique(combined_dataset$celltype)), width = '100%'),
+            )
           ),
-          
-          column(width = 6, 
-             selectInput("cell_line", "Cell Line:", choices = c("Select a cell line" = "", unique(combined_dataset$celltype)), width = '100%'),
-          )
-        ),
-        fluidRow(
-          column(width = 4,
-              numericInput("chr", "Chromosome:", value = NULL, width = '100%', min = 1),
-          ),
-          
-          column(width = 4,
-              numericInput("start_position", "Start Position:", value = NULL, width = '100%', min = 1),
-          ),
-          
-          column(width = 4,
-              numericInput("end_position", "End Position:", value = NULL, width = '100%', min = 1),
+          fluidRow(
+            column(width = 4,
+                numericInput("chr", "Chromosome:", value = NULL, width = '100%', min = 1),
+            ),
+            
+            column(width = 4,
+                numericInput("start_position", "Start Position:", value = NULL, width = '100%', min = 1),
+            ),
+            
+            column(width = 4,
+                numericInput("end_position", "End Position:", value = NULL, width = '100%', min = 1),
+            ),
           ),
         ),
         
         actionButton("reset", "Reset", class = "btn btn-dark")
       ),
+    
+      p(""),
+    
+      fluidRow(
+        column(width = 12,  
+               tags$div(
+                 class = "scrollable-table", 
+                 uiOutput("browseQueryTable")
+               )
+        )
+      ),
+    
+      p(""),
+    
+      actionButton("browseQuery", "Run Query", width = '100%', class = "btn btn-primary", icon = icon("check")),
+      
+      p(""),
+    
+      fluidPage(
+        uiOutput("browseDownloadButton")  # Placeholder for the download button (appears after Run Query)
+      ),
     ),
     
     conditionalPanel(
-      condition = "input.Id01 == 'Upload a Custom File'",
-      tabPanel(
-        title = "Upload file",
-        fluidRow(
-          column(width = 7, 
-             tags$style(".shiny-file-input-progress {display: none}"),
-             tags$b("File Instructions"),
-             tags$div(class = "text-style",
-               HTML("There are three required columns and two optional columns."),
-               p(""),
-               tags$div(class = "center-div",
-                  tags$table(
-                    tags$thead(
-                      tags$tr(
-                        tags$th("Required", colspan = 3),
-                        tags$th(tags$span(style = "color: gray;", "Optional"), colspan = 2)
+      condition = "input.Database_Section == 'Upload a Custom File'",
+      tags$div(class = "rounded-grey-square",
+        tabPanel(
+          title = "Upload file",
+          fluidRow(
+            column(width = 7, 
+               tags$style(".shiny-file-input-progress {display: none}"),
+               tags$b("File Instructions"),
+               tags$div(class = "text-style",
+                 HTML("There are three required columns and two optional columns."),
+                 p(""),
+                 tags$div(class = "center-div",
+                    tags$table(
+                      tags$thead(
+                        tags$tr(
+                          tags$th("Required", colspan = 3),
+                          tags$th(tags$span(style = "color: gray;", "Optional"), colspan = 2)
+                        ),
+                        tags$tr(
+                          tags$th("chr"),
+                          tags$th("start"),
+                          tags$th("end"),
+                          tags$th(tags$span(style = "color: gray;", "disease")),
+                          tags$th(tags$span(style = "color: gray;", "celltype"))
+                        )
                       ),
-                      tags$tr(
-                        tags$th("chr"),
-                        tags$th("start"),
-                        tags$th("end"),
-                        tags$th(tags$span(style = "color: gray;", "disease")),
-                        tags$th(tags$span(style = "color: gray;", "celltype"))
+                      tags$tbody(
+                        tags$tr(
+                          tags$td("chr1"),
+                          tags$td(1),
+                          tags$td(3),
+                          tags$td("Disease1"),
+                          tags$td("Type1")
+                        ),
+                        tags$tr(
+                          tags$td("chr2"),
+                          tags$td(4),
+                          tags$td(6),
+                          tags$td("Disease2"),
+                          tags$td("Type2")
+                        ),
+                        tags$tr(
+                          tags$td("chr3"),
+                          tags$td(7),
+                          tags$td(9),
+                          tags$td("Disease3"),
+                          tags$td("Type3")
+                        )
                       )
                     ),
-                    tags$tbody(
-                      tags$tr(
-                        tags$td("chr1"),
-                        tags$td(1),
-                        tags$td(3),
-                        tags$td("Disease1"),
-                        tags$td("Type1")
-                      ),
-                      tags$tr(
-                        tags$td("chr2"),
-                        tags$td(4),
-                        tags$td(6),
-                        tags$td("Disease2"),
-                        tags$td("Type2")
-                      ),
-                      tags$tr(
-                        tags$td("chr3"),
-                        tags$td(7),
-                        tags$td(9),
-                        tags$td("Disease3"),
-                        tags$td("Type3")
-                      )
-                    )
-                  ),
-                p(""),
+                  p(""),
+                 )
+               ),
+               
+               tags$div(
+                 class = "text-style",
+                 HTML("Need to see an example file?<br>"),
+               ),
+               
+               tags$div(style = "margin-bottom: 12px;"),
+               downloadButton("exampleDownload", "Download example .txt", class = "btn btn-dark"),
+               tags$div(style = "margin-bottom: 12px;"),
+               
+               tags$hr(),
+               
+               fileInput("customFile", "Upload a .txt file", accept = c(".txt")),
+               includeCSS("www/app.css"),
+               
+               actionButton("loadFile", "Load File", class = "btn btn-dark"),
+               img(id = "checkmark", src = "", height = 20, width = 20, margin = 10, style = "visibility: hidden; margin-left: 5px; margin-bottom: 5px"),
+               
+               p(""),
+            ),
+            
+            column(width = 5, 
+               tags$div(class = "preview-back",
+                  tags$b("Preview file"),
+                  tags$div(class = "scrollable-table", tableOutput("filePreview"))
                )
-             ),
-             
-             tags$div(
-               class = "text-style",
-               HTML("Need to see an example file?<br>"),
-             ),
-             
-             tags$div(style = "margin-bottom: 12px;"),
-             downloadButton("exampleDownload", "Download example .txt", class = "btn btn-dark"),
-             tags$div(style = "margin-bottom: 12px;"),
-             
-             tags$hr(),
-             
-             fileInput("file1", "Upload a .txt file", accept = c(".txt")),
-             includeCSS("www/app.css"),
-             
-             actionButton("loadFile", "Load File", class = "btn btn-dark"),
-             img(id = "checkmark", src = "", height = 20, width = 20, margin = 10, style = "visibility: hidden; margin-left: 5px; margin-bottom: 5px"),
-             
-             p(""),
+            ),
           ),
-          
-          column(width = 5, 
-             tags$div(class = "preview-back",
-                tags$b("Preview file"),
-                tags$div(class = "scrollable-table", tableOutput("filePreview"))
-             )
-          ),
-        ),
-      )
+        )
     ),
+    
+      p(""),
+    
+      fluidRow(
+        column(width = 12,  
+               tags$div(
+                 class = "scrollable-table", 
+                 uiOutput("customQueryTable")
+               )
+        )
+      ),
+      
+      actionButton("customQuery", "Run Query", width = '100%', class = "btn btn-primary", icon = icon("check")),
+      
+      p(""),
+    
+      fluidPage(
+        uiOutput("customDownloadButton")  # Placeholder for the download button (appears after Run Query)
+      ),
   ),
 
   p(""),
-  actionButton("queryData", "Run Query", width = '100%', class = "btn btn-primary", icon = icon("check")),
   tags$hr(),
-  
-  fluidRow(
-    column(width = 12,  
-      tags$div(class = "scrollable-table", DTOutput("table", fill = TRUE))
-    )
-  )
 )
 
 library(dplyr)
@@ -201,7 +236,7 @@ analysis_page <- tabPanel(
     tags$h6(strong("Choose your file type (BED/FASTA):")),
     selectInput("analysisFileType", label = NULL, choices = c("Select a genome" = "", c("BED" = "BED", "FASTA" = "FASTA")), width = '100%'),
     tags$hr(),
-    fileInput('file2', tags$h6(strong('Upload a .txt file')), accept = c(".txt")),
+    fileInput('analysisFile', tags$h6(strong('Upload a .txt file')), accept = c(".txt")),
   ),
   
   p(""),
