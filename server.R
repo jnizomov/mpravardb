@@ -203,7 +203,6 @@ server <- function(input, output, session) {
     
     shinyjs::runjs('$("#checkmark").css("visibility", "hidden");')
   })
-
   
   # Upload a Custom File Section
   
