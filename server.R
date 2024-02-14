@@ -72,6 +72,23 @@ getFileNameFromInputs <- function(disease, cell_line, chr, start_position, end_p
   return (paste0(filename, ".csv"));
 }
 
+isValidBED <- function(filepath) {
+  con <- file(filepath, open = "r")
+  on.exit(close(con))
+  firstLine <- readLines(con, n = 1)
+  elements <- length(strsplit(firstLine, "\t")[[1]])
+  
+  return(elements >= 3)
+}
+
+isValidFASTA <- function(filepath) {
+  con <- file(filepath, open = "r")
+  on.exit(close(con))
+  firstLine <- readLines(con, n = 1)
+  
+  return(substr(firstLine, 1, 1) == ">")
+}
+
 server <- function(input, output, session) {
   # Update the browse buttons from gray to black to match theme
   
@@ -81,7 +98,7 @@ server <- function(input, output, session) {
   browse_filtered_data <- reactiveVal(combined_dataset)
   custom_filtered_data <- reactiveVal(data.frame())
   
-  fileSubmitted <- reactiveVal(NA)
+  customFileSubmitted <- reactiveVal(NA)
   customFileExists <- reactiveVal(FALSE)
   
   browseQueryRun <- reactiveVal(FALSE)
@@ -206,15 +223,28 @@ server <- function(input, output, session) {
   
   # Upload a Custom File Section
   
-  output$exampleDownload <- downloadHandler(
-    filename = "Example.txt",
+  output$exampleCustomFile <- downloadHandler(
+    filename = function() {
+      return ("customFileExample.txt")
+    },
     
     content = function(file){
-      file.copy("file_input_examples/Example.txt", file)
+      file.copy("file_input_examples/customFileExample.txt", file)
     }
   )
   
-  shinyjs::runjs('
+  output$exampleAnalysisFile <- downloadHandler(
+    filename = function() {
+      return (ifelse(input$analysisFileType == "BED", "exampleBED.txt", "exampleFASTA.txt"))
+    },
+    
+    content = function(file){
+      file.copy(paste0("file_input_examples/", ifelse(input$analysisFileType == "BED", "exampleBED.txt", "exampleFASTA.txt")), file)
+    }
+  )
+  
+  # remove checkmark if they click on "Load File" in the Upload Custom File section
+  shinyjs::runjs(' 
     $("#customFile").on("click", function() {
       $("#checkmark").css("visibility", "hidden");
     });
@@ -234,10 +264,10 @@ server <- function(input, output, session) {
       shinyjs::runjs('$("#checkmark").css("visibility", "visible");')
     }
     
-    fileSubmitted(fread(input$customFile$datapath, fill=FALSE))
+    customFileSubmitted(fread(input$customFile$datapath, fill=FALSE))
     
     output$filePreview <- renderTable({
-      return (head(fileSubmitted()))
+      return (head(customFileSubmitted()))
     })
     
     output$previewUI <- renderUI({
@@ -270,7 +300,7 @@ server <- function(input, output, session) {
   })
   
   output$customQueryTable <- renderUI({
-    if(customQueryRun()) {
+    if(customQueryRun()){
       renderDT(
         custom_filtered_data(), 
         options = list(scrollX = TRUE)
@@ -279,31 +309,35 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$customQuery, {
-    if (!is.null(input$customFile$datapath)) { 
-      aggregated_data <- data.frame()
-      
-      for(i in 1:nrow(fileSubmitted())) {
-        row <- fileSubmitted()[i,]
-        
-        disease_column = NA # optional 
-        cell_line_column = NA # optional 
-        
-        if (ncol(fileSubmitted()) >= 4) {
-          disease_column <- row[[4]]
-        }
-        
-        if (ncol(fileSubmitted()) >= 5) {
-          cell_line_column <- row[[5]]
-        }
-        
-        filter_result <- getFilteredDataset(row[[1]], row[[2]], row[[3]], disease_column, cell_line_column)
-        
-        aggregated_data <- rbind(aggregated_data, filter_result)
-      }
-      
-      custom_filtered_data(aggregated_data)
+    if (!customFileExists()) { 
+      return ();
     }
     
+    notify_success("Well done!")
+    
+    aggregated_data <- data.frame()
+    
+    for(i in 1:nrow(customFileSubmitted())) {
+      row <- customFileSubmitted()[i,]
+      
+      disease_column = NA # optional 
+      cell_line_column = NA # optional 
+      
+      if (ncol(customFileSubmitted()) >= 4) {
+        disease_column <- row[[4]]
+      }
+      
+      if (ncol(customFileSubmitted()) >= 5) {
+        cell_line_column <- row[[5]]
+      }
+      
+      filter_result <- getFilteredDataset(row[[1]], row[[2]], row[[3]], disease_column, cell_line_column)
+      
+      aggregated_data <- rbind(aggregated_data, filter_result)
+    }
+    
+    custom_filtered_data(aggregated_data)
+      
     customQueryRun(TRUE)
   })
   
@@ -339,12 +373,11 @@ server <- function(input, output, session) {
   }) 
   
   observeEvent(input$loadAnalysisFile, {
-    probabilitiesQueryRun(FALSE)
+    if (is.null(input$analysisFile$datapath) || input$model == "" || input$analysisFileType == "" || input$paper == "" || input$genome == "") {
+      return ();
+    }
     
-    show_modal_spinner(
-      spin = "half-circle",
-      color = "#2372CA",
-    )
+    probabilitiesQueryRun(FALSE)
     
     selected_keyword <- getKeywordByPaper(input$paper)
     
@@ -355,11 +388,31 @@ server <- function(input, output, session) {
     model.filename(paste0(selected_keyword, '-', input$disease_celltype, '-', input$model))
     
     if (input$analysisFileType == "BED") {
+      if (!isValidBED(input$analysisFile$datapath)) {
+        shiny::showNotification("Uploaded file does not match the BED format.", type = "error")
+        return ()
+      }
+      
+      show_modal_spinner(
+        spin = "half-circle",
+        color = "#2372CA",
+      )
+      
       data <- fread(input$analysisFile$datapath, header = TRUE, sep = "\t", fill = FALSE) 
       probabilities <- getProbability(data, model.filename(), input$model, input$analysisFileType, input$genome)
       
       data$probabilities <- probabilities
     } else if (input$analysisFileType == "FASTA") {
+      if (!isValidFASTA(input$analysisFile$datapath)) {
+        shiny::showNotification("Uploaded file does not match the FASTA format.", type = "error")
+        return()
+      }
+      
+      show_modal_spinner(
+        spin = "half-circle",
+        color = "#2372CA",
+      )
+      
       data <- readDNAStringSet(input$analysisFile$datapath)
       probabilities <- getProbability(data, model.filename(), input$model, input$analysisFileType, input$genome)
       

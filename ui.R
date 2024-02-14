@@ -137,7 +137,7 @@ database_page <- tabPanel(
                ),
                
                tags$div(style = "margin-bottom: 12px;"),
-               downloadButton("exampleDownload", "Download example .txt", class = "btn btn-dark"),
+               downloadButton("exampleCustomFile", "Download example .txt", class = "btn btn-dark"),
                tags$div(style = "margin-bottom: 12px;"),
                
                tags$hr(),
@@ -232,9 +232,17 @@ analysis_page <- tabPanel(
   tags$div(class = "rounded-grey-square",
     p(""),
     tags$h6(strong("Choose your file type (BED/FASTA):")),
-    selectInput("analysisFileType", label = NULL, choices = c("Select a genome" = "", c("BED" = "BED", "FASTA" = "FASTA")), width = '100%'),
+    selectInput("analysisFileType", label = NULL, choices = c("Select a file type" = "", c("BED" = "BED", "FASTA" = "FASTA")), width = '100%'),
     tags$hr(),
     fileInput('analysisFile', tags$h6(strong('Upload a .txt file')), accept = c(".txt")),
+    
+    tags$h6(
+      "Need to see an example file?"
+    ),
+    
+    tags$div(style = "margin-bottom: 12px;"),
+    downloadButton("exampleAnalysisFile", "Download example .txt", class = "btn btn-dark"),
+    tags$div(style = "margin-bottom: 12px;"),
   ),
   
   p(""),
