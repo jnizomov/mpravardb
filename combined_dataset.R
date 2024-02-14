@@ -54,7 +54,7 @@ rm(df)
 
 combined_dataset <- bind_rows(
   mget(dataset_names),
-  .id = "source_dataset"
+  .id = "MPRA_study"
 )
 
 # Empty cells initialized to 1 and 0 for FDR and log2FC respectively
@@ -67,11 +67,36 @@ combined_dataset$log2FC[is.na(combined_dataset$log2FC)]=0
 combined_dataset$chr <- gsub("^chr", "", combined_dataset$chr)
 
 combined_dataset <- combined_dataset %>%
-  relocate(source_dataset, .after = last_col())
+  relocate(MPRA_study, .after = last_col())
 
 # Delete strand column
 
 combined_dataset$strand <- NULL
+
+# Reorder columns
+
+combined_dataset <- combined_dataset %>%
+  select(
+    chr,
+    pos,
+    ref,
+    alt,
+    genome,
+    rsid,
+    disease,
+    celltype,
+    GWASorQTL,
+    log2FC,
+    pvalue,
+    fdr,
+    distancetoGene,
+    insideGene,
+    gene_name,
+    gene_start,
+    gene_end,
+    gene_strand,
+    MPRA_study
+  )
 
 # ---------- #
 #   Export   #
@@ -83,14 +108,16 @@ save(combined_dataset, file = "combined_dataset.RData")
 
 analysis_dataset <- combined_dataset %>%
   dplyr::mutate(keyword = case_when(
-    source_dataset == "Functional_regulatory_variants_implicate_distinct_transcriptional_networks_in_dementia" ~ "dementia",
-    source_dataset == "Genome_wide_functional_screen_of_30_UTR_variants_uncovers_causal_variants_for_human_disease_and_evolution" ~ "evolution3UTR",
-    source_dataset == "Transcriptional_regulatory_convergence_across_functional_MDD_risk_variants_identified_by_massively_parallel_reporter_assays" ~ "MDD",
-    source_dataset == "Saturation_mutagenesis_of_twenty_disease_associated_regulatory_elements_at_single_base_pair_resolution_GRCh37_ALL" ~ "mutagenesis",
-    source_dataset == "Prioritization_of_autoimmune_disease_associated_genetic_variants_that_perturb_regulatory_element_activity_in_T_cells" ~ "autoimmune",
-    source_dataset == "Massively_parallel_reporter_assays_and_variant_scoring_identified_functional_variants_and_target_genes_for_melanoma_loci_and_highlighted_cell_type_specificity" ~ "melanoma",
+    MPRA_study == "Functional_regulatory_variants_implicate_distinct_transcriptional_networks_in_dementia" ~ "dementia",
+    MPRA_study == "Genome_wide_functional_screen_of_30_UTR_variants_uncovers_causal_variants_for_human_disease_and_evolution" ~ "evolution3UTR",
+    MPRA_study == "Transcriptional_regulatory_convergence_across_functional_MDD_risk_variants_identified_by_massively_parallel_reporter_assays" ~ "MDD",
+    MPRA_study == "Saturation_mutagenesis_of_twenty_disease_associated_regulatory_elements_at_single_base_pair_resolution_GRCh37_ALL" ~ "mutagenesis",
+    MPRA_study == "Prioritization_of_autoimmune_disease_associated_genetic_variants_that_perturb_regulatory_element_activity_in_T_cells" ~ "autoimmune",
+    MPRA_study == "Massively_parallel_reporter_assays_and_variant_scoring_identified_functional_variants_and_target_genes_for_melanoma_loci_and_highlighted_cell_type_specificity" ~ "melanoma",
     TRUE ~ NA
   ))
 
 analysis_dataset <- analysis_dataset %>%
   dplyr::filter(!is.na(keyword))
+
+save(analysis_dataset, file = "analysis_dataset.RData")

@@ -14,11 +14,11 @@ source('genetics_processed_clean/model_extraction.R')
 # ----------------------------- #
 
 getPaperByKeyword = function(keyword) {
-  return (analysis_dataset$source_dataset[which(analysis_dataset$keyword == keyword)[1]]);
+  return (analysis_dataset$MPRA_study[which(analysis_dataset$keyword == keyword)[1]]);
 }
 
 getKeywordByPaper = function(paper) {
-  return (analysis_dataset$keyword[which(analysis_dataset$source_dataset == paper)[1]]);
+  return (analysis_dataset$keyword[which(analysis_dataset$MPRA_study == paper)[1]]);
 }
 
 getFilteredDataset = function(input_chr, input_start, input_end, input_disease, input_cell) {
@@ -349,8 +349,6 @@ server <- function(input, output, session) {
   probabilitiesOutput <- reactiveVal(data.frame())
   
   observeEvent(input$paper, {
-    dt <- analysis_dataset[analysis_dataset$source_dataset == input$paper, ]
-    
     # Update the choices in the 'disease_celltype' input based on selected paper
     
     updateSelectInput(

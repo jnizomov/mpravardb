@@ -187,7 +187,7 @@ database_page <- tabPanel(
 
 library(dplyr)
 
-# Filter rows where keyword is not missing and get unique source_dataset values
+# Filter rows where keyword is not missing and get unique MPRA_study values
 
 analysis_page <- tabPanel(
   title = div(icon("chart-bar", style = "margin-right: 5px;"), "Analysis"),
@@ -213,7 +213,7 @@ analysis_page <- tabPanel(
     
     selectInput("paper", 
                 tags$h6(strong("Choose a paper:")), 
-                choices = c("Select a paper" = "", unique(analysis_dataset$source_dataset)), 
+                choices = c("Select a paper" = "", unique(analysis_dataset$MPRA_study)), 
                 width = '100%'),
     
     selectInput("disease_celltype", 
